@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STV Radiomeltdown — Live Stream</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  background:#000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  font-family:'DM Sans',sans-serif;
+  padding:1.5rem;
+  background-image:radial-gradient(ellipse at center, #1a0a00 0%, #000 70%);
+}
+
+.player-wrap{
+  width:100%;
+  max-width:440px;
+}
+
+/* VU METER */
+.vu-wrap{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:3px;
+  height:40px;
+  margin-bottom:1.5rem;
+  opacity:0;
+  transition:opacity .4s;
+}
+.vu-wrap.active{opacity:1;}
+.vu-bar{
+  width:4px;
+  border-radius:2px;
+  background:rgba(200,169,110,0.4);
+  animation:vu-bounce 0.8s ease-in-out infinite;
+  min-height:4px;
+}
+.vu-bar:nth-child(odd){animation-duration:.6s;}
+.vu-bar:nth-child(3n){animation-duration:1s;}
+.vu-bar.red{background:rgba(232,0,45,0.6);}
+@keyframes vu-bounce{
+  0%,100%{height:4px;}
+  50%{height:var(--h,24px);}
+}
+
+/* MAIN PLAYER CARD */
+.player-card{
+  background:#111;
+  border:1px solid rgba(200,169,110,0.25);
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:0 0 60px rgba(200,169,110,0.06),0 0 0 1px rgba(0,0,0,0.5);
+}
+
+/* TOP BAR */
+.player-top{
+  background:#0a0806;
+  border-bottom:1px solid rgba(200,169,110,0.15);
+  padding:.6rem 1.25rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.live-pill{
+  display:flex;
+  align-items:center;
+  gap:.4rem;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:.75rem;
+  letter-spacing:.2em;
+  color:#e8002d;
+}
+.live-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#e8002d;
+  box-shadow:0 0 8px rgba(232,0,45,.8);
+  animation:blink 1.2s ease-in-out infinite;
+}
+.live-dot.off{background:#333;box-shadow:none;animation:none;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+.freq-display{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:.75rem;
+  letter-spacing:.15em;
+  color:rgba(200,169,110,.4);
+}
+
+/* STATION IDENTITY */
+.station-id{
+  padding:1.75rem 1.5rem 1.25rem;
+  text-align:center;
+  border-bottom:1px solid rgba(200,169,110,.1);
+}
+.station-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(2rem,8vw,3.2rem);
+  letter-spacing:.08em;
+  color:#fff;
+  line-height:1;
+}
+.station-name span{color:#c8a96e;}
+.station-sub{
+  font-size:9px;
+  letter-spacing:.35em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.3);
+  margin-top:.4rem;
+}
+.station-tag{
+  font-size:10px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:rgba(200,169,110,.5);
+  margin-top:.6rem;
+  font-style:italic;
+}
+
+/* NOW PLAYING */
+.now-playing{
+  padding:.75rem 1.5rem;
+  border-bottom:1px solid rgba(200,169,110,.1);
+  min-height:52px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.np-label{
+  font-size:8px;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.25);
+  margin-bottom:.25rem;
+}
+.np-track{
+  font-size:13px;
+  color:rgba(255,255,255,.75);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.np-track.scrolling{
+  animation:scroll-text 12s linear infinite;
+  display:inline-block;
+  white-space:nowrap;
+}
+@keyframes scroll-text{
+  0%{transform:translateX(0);}
+  100%{transform:translateX(-60%);}
+}
+
+/* PROGRESS BAR (live = simulated) */
+.live-bar-wrap{
+  padding:0 1.5rem .5rem;
+}
+.live-bar-track{
+  height:2px;
+  background:rgba(255,255,255,.08);
+  border-radius:2px;
+  position:relative;
+  overflow:hidden;
+}
+.live-bar-fill{
+  position:absolute;
+  left:0;top:0;bottom:0;
+  background:linear-gradient(90deg,#8b6914,#c8a96e);
+  width:0%;
+  border-radius:2px;
+  transition:width .5s ease;
+}
+.live-bar-pulse{
+  position:absolute;
+  right:0;top:50%;transform:translateY(-50%);
+  width:8px;height:8px;
+  border-radius:50%;
+  background:#c8a96e;
+  box-shadow:0 0 6px #c8a96e;
+  display:none;
+}
+.live-bar-pulse.active{display:block;animation:pulse-dot .8s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:translateY(-50%) scale(1);}50%{opacity:.5;transform:translateY(-50%) scale(.7);}}
+.live-tag{
+  font-size:8px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:rgba(200,169,110,.4);
+  text-align:right;
+  margin-top:.3rem;
+}
+
+/* CONTROLS */
+.controls{
+  padding:1.25rem 1.5rem;
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  border-bottom:1px solid rgba(200,169,110,.1);
+}
+.play-btn{
+  width:56px;
+  height:56px;
+  border-radius:50%;
+  background:#e8002d;
+  border:none;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  transition:background .15s,transform .1s;
+  box-shadow:0 0 20px rgba(232,0,45,.3);
+}
+.play-btn:hover{background:#c20025;transform:scale(1.05);}
+.play-btn svg{width:18px;height:18px;fill:#fff;margin-left:2px;}
+.play-btn.playing svg{margin-left:0;}
+
+.vol-section{flex:1;display:flex;flex-direction:column;gap:.4rem;}
+.vol-label{
+  font-size:8px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.25);
+  display:flex;
+  justify-content:space-between;
+}
+.vol-slider{
+  -webkit-appearance:none;
+  appearance:none;
+  width:100%;
+  height:3px;
+  border-radius:2px;
+  background:rgba(255,255,255,.1);
+  outline:none;
+  cursor:pointer;
+}
+.vol-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:14px;height:14px;
+  border-radius:50%;
+  background:#c8a96e;
+  cursor:pointer;
+  box-shadow:0 0 6px rgba(200,169,110,.5);
+}
+.vol-slider::-moz-range-thumb{
+  width:14px;height:14px;
+  border-radius:50%;
+  background:#c8a96e;
+  border:none;
+  cursor:pointer;
+}
+
+.mute-btn{
+  background:transparent;
+  border:1px solid rgba(200,169,110,.2);
+  color:rgba(200,169,110,.5);
+  width:36px;height:36px;
+  border-radius:4px;
+  cursor:pointer;
+  font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+  flex-shrink:0;
+}
+.mute-btn:hover{border-color:#c8a96e;color:#c8a96e;}
+
+/* BOTTOM LINKS */
+.player-links{
+  padding:.75rem 1.5rem;
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+}
+.link-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:.35rem;
+  font-size:9px;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.35);
+  text-decoration:none;
+  border:1px solid rgba(255,255,255,.08);
+  padding:.25rem .6rem;
+  border-radius:3px;
+  transition:all .2s;
+}
+.link-pill:hover{color:#fff;border-color:rgba(200,169,110,.3);}
+.link-pill.red{color:rgba(232,0,45,.6);border-color:rgba(232,0,45,.2);}
+.link-pill.red:hover{color:#e8002d;border-color:#e8002d;}
+
+/* SIGNAL BARS */
+.signal-wrap{
+  display:flex;
+  align-items:flex-end;
+  gap:2px;
+  margin-left:auto;
+}
+.sig-bar{
+  width:4px;
+  border-radius:1px;
+  background:rgba(200,169,110,.15);
+}
+.sig-bar.lit{background:#c8a96e;}
+.sig-bar:nth-child(1){height:6px;}
+.sig-bar:nth-child(2){height:10px;}
+.sig-bar:nth-child(3){height:14px;}
+.sig-bar:nth-child(4){height:18px;}
+.sig-bar:nth-child(5){height:22px;}
+
+/* STATUS TEXT */
+.status-text{
+  text-align:center;
+  font-size:9px;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.2);
+  margin-top:1rem;
+}
+.status-text a{color:rgba(200,169,110,.4);text-decoration:none;}
+.status-text a:hover{color:#c8a96e;}
+</style>
+</head>
+<body>
+
+<div class="player-wrap">
+
+  <!-- VU METER -->
+  <div class="vu-wrap" id="vu"></div>
+
+  <div class="player-card">
+
+    <!-- TOP BAR -->
+    <div class="player-top">
+      <div class="live-pill">
+        <span class="live-dot off" id="live-dot"></span>
+        <span id="live-text">OFFLINE</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <div class="signal-wrap" id="signal">
+          <div class="sig-bar"></div>
+          <div class="sig-bar"></div>
+          <div class="sig-bar"></div>
+          <div class="sig-bar"></div>
+          <div class="sig-bar"></div>
+        </div>
+        <div class="freq-display">G4E MOVEMENT STUDIO</div>
+      </div>
+    </div>
+
+    <!-- STATION ID -->
+    <div class="station-id">
+      <div class="station-name">STV <span>RADIO</span>MELTDOWN</div>
+      <div class="station-sub">Lithonia, GA &nbsp;·&nbsp; Independent Broadcast</div>
+      <div class="station-tag">Culture-Driven. Community-Built. Always Live.</div>
+    </div>
+
+    <!-- NOW PLAYING -->
+    <div class="now-playing">
+      <div class="np-label">Now Playing</div>
+      <div class="np-track" id="np-track">Press play to tune in</div>
+    </div>
+
+    <!-- LIVE BAR -->
+    <div class="live-bar-wrap">
+      <div class="live-bar-track">
+        <div class="live-bar-fill" id="live-fill"></div>
+        <div class="live-bar-pulse" id="live-pulse"></div>
+      </div>
+      <div class="live-tag" id="live-tag">LIVE STREAM</div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <button class="play-btn" id="play-btn" onclick="togglePlay()" aria-label="Play/Pause">
+        <svg id="play-icon" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+      </button>
+
+      <div class="vol-section">
+        <div class="vol-label">
+          <span>Volume</span>
+          <span id="vol-pct">80%</span>
+        </div>
+        <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="80" oninput="setVol(this.value)">
+      </div>
+
+      <button class="mute-btn" id="mute-btn" onclick="toggleMute()" title="Mute/Unmute">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="vol-icon">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- LINKS -->
+    <div class="player-links">
+      <a href="https://kick.com/STVNETWORK" target="_blank" rel="noopener" class="link-pill red">Watch on Kick</a>
+      <a href="https://www.youtube.com/@STVRADIOMELTDOWN" target="_blank" rel="noopener" class="link-pill red">YouTube</a>
+      <a href="https://radiomeltdown.com" target="_blank" rel="noopener" class="link-pill">radiomeltdown.com</a>
+      <a href="https://www.tiktok.com/@sanecatv" target="_blank" rel="noopener" class="link-pill">@SanecaTV</a>
+    </div>
+
+  </div>
+
+  <div class="status-text">
+    Having trouble? <a href="https://radiomeltdown.com" target="_blank">Visit radiomeltdown.com</a>
+  </div>
+
+</div>
+
+<audio id="radio-audio" preload="none">
+  <source src="https://listen.streamaudio.co/proxy/stvradio/stream" type="audio/mpeg">
+</audio>
+
+<script>
+const audio = document.getElementById('radio-audio');
+const playBtn = document.getElementById('play-btn');
+const playIcon = document.getElementById('play-icon');
+const liveDot = document.getElementById('live-dot');
+const liveText = document.getElementById('live-text');
+const npTrack = document.getElementById('np-track');
+const liveFill = document.getElementById('live-fill');
+const livePulse = document.getElementById('live-pulse');
+const volSlider = document.getElementById('vol-slider');
+const volPct = document.getElementById('vol-pct');
+const volIcon = document.getElementById('vol-icon');
+const vu = document.getElementById('vu');
+const signal = document.getElementById('signal');
+
+let playing = false;
+let muted = false;
+let vuInterval = null;
+let fillInterval = null;
+let fillPct = 0;
+
+const PLAY_PATH = '<polygon points="5,3 19,12 5,21"/>';
+const PAUSE_PATH = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+const VOL_ON = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>';
+const VOL_OFF = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+
+// Build VU bars
+for(let i=0;i<20;i++){
+  const bar = document.createElement('div');
+  bar.className = 'vu-bar' + (i>=16?' red':'');
+  const h = 8 + Math.random()*28;
+  bar.style.setProperty('--h', h+'px');
+  bar.style.height = '4px';
+  bar.style.animationDelay = (Math.random()*0.8)+'s';
+  vu.appendChild(bar);
+}
+
+function togglePlay(){
+  if(!playing){
+    audio.load();
+    audio.play()
+      .then(()=>{
+        playing = true;
+        setLive(true);
+        startVU();
+        startFill();
+        playIcon.innerHTML = PAUSE_PATH;
+        npTrack.textContent = 'STV Radiomeltdown — Live Now';
+      })
+      .catch(()=>{
+        setLive(false);
+        npTrack.textContent = 'Stream unavailable — check back soon';
+      });
+  } else {
+    audio.pause();
+    playing = false;
+    setLive(false);
+    stopVU();
+    stopFill();
+    playIcon.innerHTML = PLAY_PATH;
+    npTrack.textContent = 'Press play to tune in';
+  }
+}
+
+function setLive(on){
+  if(on){
+    liveDot.classList.remove('off');
+    liveText.textContent = 'LIVE';
+    liveText.style.color = '#e8002d';
+    livePulse.classList.add('active');
+    setSigBars(5);
+  } else {
+    liveDot.classList.add('off');
+    liveText.textContent = 'OFFLINE';
+    liveText.style.color = '';
+    livePulse.classList.remove('active');
+    setSigBars(0);
+    liveFill.style.width = '0%';
+  }
+}
+
+function setSigBars(count){
+  signal.querySelectorAll('.sig-bar').forEach((b,i)=>{
+    b.classList.toggle('lit', i<count);
+  });
+}
+
+function startVU(){
+  vu.classList.add('active');
+  vuInterval = setInterval(()=>{
+    vu.querySelectorAll('.vu-bar').forEach(b=>{
+      const h = 4+Math.random()*34;
+      b.style.setProperty('--h',h+'px');
+    });
+  },400);
+}
+
+function stopVU(){
+  vu.classList.remove('active');
+  clearInterval(vuInterval);
+}
+
+function startFill(){
+  fillPct = 0;
+  fillInterval = setInterval(()=>{
+    fillPct = fillPct >= 100 ? 0 : fillPct + 0.08;
+    liveFill.style.width = fillPct + '%';
+    livePulse.style.left = fillPct + '%';
+  }, 100);
+}
+
+function stopFill(){
+  clearInterval(fillInterval);
+}
+
+function setVol(val){
+  audio.volume = val/100;
+  volPct.textContent = Math.round(val)+'%';
+  if(val == 0){
+    muted = true;
+    volIcon.innerHTML = VOL_OFF;
+  } else {
+    muted = false;
+    volIcon.innerHTML = VOL_ON;
+  }
+}
+
+function toggleMute(){
+  muted = !muted;
+  audio.muted = muted;
+  if(muted){
+    volIcon.innerHTML = VOL_OFF;
+    volSlider.value = 0;
+    volPct.textContent = '0%';
+  } else {
+    volIcon.innerHTML = VOL_ON;
+    const v = audio.volume*100;
+    volSlider.value = v;
+    volPct.textContent = Math.round(v)+'%';
+  }
+}
+
+audio.volume = 0.8;
+
+audio.addEventListener('error',()=>{
+  if(playing){
+    setLive(false);
+    npTrack.textContent = 'Connection lost — retrying...';
+    setTimeout(()=>{
+      if(playing) audio.load(), audio.play().catch(()=>{});
+    }, 5000);
+  }
+});
+</script>
+</body>
+</html>
