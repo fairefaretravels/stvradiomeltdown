@@ -1,4 +1,7 @@
 [
-  { "file": "no-body1.mp3",   "title": "No Body"      },
-  { "file": "PEICE FOR ME.mp3", "title": "Peice For Me" }
+  { "file": "no-body1.mp3", "title": "No Body" },
+  { "file": "PIECE FOR ME.mp3", "title": "Peice For Me" },
+  { "file": "The Switchblades - Distant Lover.mp3", "title": "Distant Lover" },
+  { "file": "Seneca Mack - See It Hurt.mp3", "title": "See It Hurt" },
+  { "file": "Mackinthedark - Get Up.mp3", "title": "Get Up" }
 ]
